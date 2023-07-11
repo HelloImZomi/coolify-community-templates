@@ -1,0 +1,64 @@
+templateVersion: 1.0.0
+defaultVersion: 'v1.16.5'
+documentation: https://docs.paperless-ngx.com/
+type: paperless-ngx
+name: Paperless-NGX
+description: A supercharged version of Paperless: scan, index and archive all your physical documents.
+labels:
+  - documents
+  - archive
+  - scan
+services:
+  $$id-broker:
+    name: Broker
+    documentation: https://redis.io/
+    depends_on: []
+    image: redis:7
+    volumes:
+      - $$id-redisdata:/data
+  $$id-db:
+    name: Database
+    documentation: https://www.postgresql.org/
+    depends_on: []
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=$$config_pg_db
+      - POSTGRES_USER=$$config_pg_user
+      - POSTGRES_PASSWORD=$$secret_pg_password
+    volumes:
+      - $$id-pgdata:/var/lib/postgresql/data
+  $$id-webserver:
+    name: Webserver
+    documentation: https://docs.paperless-ngx.com/
+    depends_on: ['$$id-db', '$$id-broker']
+    image: ghcr.io/paperless-ngx/paperless-ngx:$$core_version
+    environment:
+      - PAPERLESS_REDIS=redis://$$id-broker:6379
+      - PAPERLESS_DBHOST=$$id-db
+    volumes:
+      - $$id-data:/usr/src/paperless/data
+      - $$id-media:/usr/src/paperless/media
+      - $$id-export:/usr/src/paperless/export
+      - $$id-consume:/usr/src/paperless/consume
+    ports:
+      - '8000'
+variables:
+  - id: $$config_pg_db
+    name: POSTGRES_DB
+    label: PostgreSQL Database
+    defaultValue: paperless
+    description: PostgreSQL database name.
+    required: true
+  - id: $$config_pg_user
+    name: POSTGRES_USER
+    label: PostgreSQL User
+    defaultValue: paperless
+    description: PostgreSQL user.
+    required: true
+  - id: $$secret_pg_password
+    name: POSTGRES_PASSWORD
+    label: PostgreSQL Password
+    defaultValue: $$generate_password
+    description: PostgreSQL password.
+    required: true
+    showOnConfiguration: true
